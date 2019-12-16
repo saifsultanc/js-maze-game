@@ -1,4 +1,5 @@
 let mazeCanvas = document.getElementById("mazeCanvas");
+let mazeContext = mazeCanvas.getContext("2d");
 let mazeSize, cellSize;
 let maze;
 let start, end;
@@ -25,6 +26,14 @@ const moveDirections = {
     prev: "e"
   }
 };
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 function pickStartEndPoints() {
   let pick = Math.random(4);
@@ -69,11 +78,11 @@ function pickStartEndPoints() {
 }
 
 function createMaze() {
-  mazeMap = new Array(mazeSize);
+  maze = new Array(mazeSize);
   for (y = 0; y < mazeSize; y++) {
-    mazeMap[y] = new Array(mazeSize);
+    maze[y] = new Array(mazeSize);
     for (x = 0; x < mazeSize; x++) {
-      mazeMap[y][x] = {
+      maze[y][x] = {
         n: false,
         s: false,
         e: false,
@@ -83,10 +92,9 @@ function createMaze() {
       };
     }
   }
-  return mazeMap;
 }
 
-function buildMaze() {
+function setMaze() {
   let isComp = false;
   let move = false;
   let cellsVisited = 1;
@@ -99,7 +107,7 @@ function buildMaze() {
   let numCells = mazeSize * mazeSize;
   while (!isComp) {
     move = false;
-    mazeMap[pos.x][pos.y].visited = true;
+    maze[pos.x][pos.y].visited = true;
 
     if (numLoops >= maxLoops) {
       shuffle(directions);
@@ -109,18 +117,18 @@ function buildMaze() {
     numLoops++;
     for (index = 0; index < directions.length; index++) {
       let direction = directions[index];
-      let nx = pos.x + modDir[direction].x;
-      let ny = pos.y + modDir[direction].y;
+      let nx = pos.x + moveDirections[direction].x;
+      let ny = pos.y + moveDirections[direction].y;
 
       if (nx >= 0 && nx < mazeSize && ny >= 0 && ny < mazeSize) {
         //Check if the tile is already visited
-        if (!mazeMap[nx][ny].visited) {
+        if (!maze[nx][ny].visited) {
           //Carve through walls from this tile to next
-          mazeMap[pos.x][pos.y][direction] = true;
-          mazeMap[nx][ny][modDir[direction].o] = true;
+          maze[pos.x][pos.y][direction] = true;
+          maze[nx][ny][moveDirections[direction].o] = true;
 
           //Set Currentcell as next cells Prior visited
-          mazeMap[nx][ny].priorPos = pos;
+          maze[nx][ny].priorPos = pos;
           //Update Cell position to newly visited location
           pos = {
             x: nx,
@@ -137,12 +145,57 @@ function buildMaze() {
     if (!move) {
       //  If it failed to find a direction,
       //  move the current position back to the prior cell and Recall the method.
-      pos = mazeMap[pos.x][pos.y].priorPos;
+      pos = maze[pos.x][pos.y].priorPos;
     }
     if (numCells == cellsVisited) {
       isComp = true;
     }
   }
+}
+
+function drawCell(xcoordinate, ycoordinate, cell) {
+  let x = xcoordinate * cellSize;
+  let y = ycoordinate * cellSize;
+
+  if (cell.n === false) {
+    mazeContext.beginPath();
+    mazeContext.moveTo(x, y);
+    mazeContext.lineTo(x + cellSize, y);
+    mazeContext.stroke();
+  }
+  if (cell.s === false) {
+    mazeContext.beginPath();
+    mazeContext.moveTo(x, y + cellSize);
+    mazeContext.lineTo(x + cellSize, y + cellSize);
+    mazeContext.stroke();
+  }
+  if (cell.e === false) {
+    mazeContext.beginPath();
+    mazeContext.moveTo(x + cellSize, y);
+    mazeContext.lineTo(x + cellSize, y + cellSize);
+    mazeContext.stroke();
+  }
+  if (cell.w === false) {
+    mazeContext.beginPath();
+    mazeContext.moveTo(x, y);
+    mazeContext.lineTo(x, y + cellSize);
+    mazeContext.stroke();
+  }
+}
+
+function drawMaze() {
+  //let drawEndMethod;
+  mazeContext.lineWidth = cellSize / 40;
+
+  let canvasSize = cellSize * maze.length;
+  mazeContext.clearRect(0, 0, canvasSize, canvasSize);
+
+  for (x = 0; x < maze.length; x++) {
+    for (y = 0; y < maze[x].length; y++) {
+      drawCell(x, y, maze[x][y]);
+    }
+  }
+  // mazeContext.closePath();
 }
 
 function buildMaze() {
@@ -151,5 +204,8 @@ function buildMaze() {
   cellSize = mazeCanvas.width / mazeSize;
   createMaze();
   pickStartEndPoints();
-  buildMaze();
+  setMaze();
+  drawMaze();
 }
+
+// copy
